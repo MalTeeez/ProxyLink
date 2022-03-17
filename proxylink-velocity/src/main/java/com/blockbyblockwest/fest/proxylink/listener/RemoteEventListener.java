@@ -12,9 +12,9 @@ import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.server.ServerInfo;
 import java.net.InetSocketAddress;
-import net.kyori.text.TextComponent;
-import net.kyori.text.serializer.gson.GsonComponentSerializer;
-import net.kyori.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
 public class RemoteEventListener {
 
@@ -59,11 +59,11 @@ public class RemoteEventListener {
     if (e.getType() == MessageType.COMPONENT) {
       plugin.getProxy().getPlayer(e.getUniqueId())
           .ifPresent(player -> player
-              .sendMessage(GsonComponentSerializer.INSTANCE.deserialize(e.getMessage())));
+              .sendMessage(GsonComponentSerializer.gson().deserialize(e.getMessage())));
     } else if (e.getType() == MessageType.STRING) {
       plugin.getProxy().getPlayer(e.getUniqueId())
           .ifPresent(player -> player
-              .sendMessage(LegacyComponentSerializer.legacy().deserialize(e.getMessage())));
+              .sendMessage(LegacyComponentSerializer.legacySection().deserialize(e.getMessage())));
     }
   }
 
@@ -72,13 +72,13 @@ public class RemoteEventListener {
     plugin.getLogger().info("Kick user {} for reason {}", e.getUniqueId(), e.getReason());
     plugin.getProxy().getPlayer(e.getUniqueId())
         .ifPresent(player -> player
-            .disconnect(LegacyComponentSerializer.legacy().deserialize(e.getReason())));
+            .disconnect(LegacyComponentSerializer.legacySection().deserialize(e.getReason())));
 
   }
 
   @Subscribe
   public void onBroadcast(NetworkBroadcastEvent e) {
-    TextComponent message = LegacyComponentSerializer.legacy().deserialize(e.getMessage());
+    TextComponent message = LegacyComponentSerializer.legacySection().deserialize(e.getMessage());
     for (Player player : plugin.getProxy().getAllPlayers()) {
       if (e.getPermission().isEmpty() || player.hasPermission(e.getPermission())) {
         player.sendMessage(message);

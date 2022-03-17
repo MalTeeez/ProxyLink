@@ -2,19 +2,20 @@ package com.blockbyblockwest.fest.proxylink.command;
 
 import com.blockbyblockwest.fest.proxylink.ProxyLinkVelocity;
 import com.blockbyblockwest.fest.proxylink.exception.ServiceException;
-import com.velocitypowered.api.command.Command;
 import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ServerConnection;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import net.kyori.text.TextComponent;
-import net.kyori.text.format.TextColor;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class SendCommand implements Command {
+public class SendCommand implements SimpleCommand {
 
   private final ProxyLinkVelocity plugin;
 
@@ -23,53 +24,57 @@ public class SendCommand implements Command {
   }
 
   @Override
-  public void execute(CommandSource source, @NonNull String[] args) {
+  public void execute(SimpleCommand.Invocation invocation) {
+    CommandSource commandSource = invocation.source();
+    String[] strings = invocation.arguments();    
+    
     try {
-      plugin.getProfileService().getProfile(args[0]).ifPresent(profile -> {
+      plugin.getProfileService().getProfile(strings[0]).ifPresent(profile -> {
         try {
           if (plugin.getNetworkService().isUserOnline(profile.getUniqueId())) {
             RegisteredServer targetServer = null;
-            if (args.length > 1) {
-              targetServer = plugin.getProxy().getServer(args[1]).orElse(null);
-            } else if (source instanceof Player) {
-              targetServer = ((Player) source).getCurrentServer().map(ServerConnection::getServer)
+            if (strings.length > 1) {
+              targetServer = plugin.getProxy().getServer(strings[1]).orElse(null);
+            } else if (commandSource instanceof Player) {
+              targetServer = ((Player) commandSource).getCurrentServer().map(ServerConnection::getServer)
                   .orElse(null);
             }
             if (targetServer != null) {
-              source.sendMessage(TextComponent.of("Trying to send them over...", TextColor.GREEN));
+              commandSource.sendMessage(Component.text("Trying to send them over...", NamedTextColor.GREEN));
               plugin.getNetworkService().getUser(profile.getUniqueId())
                   .sendToServer(targetServer.getServerInfo().getName());
             } else {
-              source.sendMessage(TextComponent.of("No target server found", TextColor.RED));
+              commandSource.sendMessage(Component.text("No target server found", NamedTextColor.RED));
             }
           } else {
-            source.sendMessage(TextComponent.of("Player is not online", TextColor.RED));
+            commandSource.sendMessage(Component.text("Player is not online", NamedTextColor.RED));
           }
         } catch (ServiceException e) {
           e.printStackTrace();
-          source.sendMessage(TextComponent.of("An error occurred", TextColor.RED));
+          commandSource.sendMessage(Component.text("An error occurred", NamedTextColor.RED));
         }
       });
     } catch (ServiceException e) {
       e.printStackTrace();
-      source.sendMessage(TextComponent.of("An error occurred", TextColor.RED));
+      commandSource.sendMessage(Component.text("An error occurred", NamedTextColor.RED));
     }
   }
 
   @Override
-  public List<String> suggest(CommandSource source, @NonNull String[] currentArgs) {
-    if (currentArgs.length != 1 || currentArgs[0].length() < 2) {
+  public List<String> suggest(SimpleCommand.Invocation invocation) {
+    String[] strings = invocation.arguments();
+    if (strings.length != 1 || strings[0].length() < 2) {
       return Collections.emptyList();
     }
     return plugin.getOnlinePlayerNames().getNames()
         .stream()
-        .filter(name -> name.regionMatches(true, 0, currentArgs[0], 0, currentArgs[0].length()))
+        .filter(name -> name.regionMatches(true, 0, strings[0], 0, strings[0].length()))
         .collect(Collectors.toList());
   }
 
   @Override
-  public boolean hasPermission(CommandSource source, @NonNull String[] args) {
-    return source.hasPermission("proxylink.sendto");
+  public boolean hasPermission(SimpleCommand.Invocation invocation) {
+    return invocation.source().hasPermission("proxylink.sendto");
   }
 
 }
