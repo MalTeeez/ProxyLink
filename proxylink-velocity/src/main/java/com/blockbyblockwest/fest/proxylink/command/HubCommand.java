@@ -4,16 +4,17 @@ import com.blockbyblockwest.fest.proxylink.ProxyLinkVelocity;
 import com.blockbyblockwest.fest.proxylink.ServerType;
 import com.blockbyblockwest.fest.proxylink.exception.ServiceException;
 import com.blockbyblockwest.fest.proxylink.models.BackendServer;
-import com.velocitypowered.api.command.Command;
 import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import java.util.Comparator;
 import java.util.Optional;
-import net.kyori.text.TextComponent;
-import net.kyori.text.format.TextColor;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class HubCommand implements Command {
+public class HubCommand implements SimpleCommand {
 
   private final ProxyLinkVelocity plugin;
 
@@ -22,16 +23,19 @@ public class HubCommand implements Command {
   }
 
   @Override
-  public void execute(CommandSource source, @NonNull String[] strings) {
-    if (source instanceof Player) {
-      Player player = (Player) source;
+  public void execute(SimpleCommand.Invocation invocation) {
+    CommandSource commandSource = invocation.source();
+    String[] strings = invocation.arguments();
+
+    if (commandSource instanceof Player) {
+      Player player = (Player) commandSource;
       player.getCurrentServer().ifPresent(connection -> {
         try {
           plugin.getNetworkService().getServer(connection.getServerInfo().getName()).ifPresent(
               backendServer -> {
                 if (backendServer.getServerType() == ServerType.HUB) {
                   player.sendMessage(
-                      TextComponent.of("You are already connected to a hub!").color(TextColor.RED));
+                      Component.text("You are already connected to a hub!").color(NamedTextColor.RED));
                   return;
                 }
 
@@ -43,16 +47,15 @@ public class HubCommand implements Command {
 
                   if (hubServer.isPresent()) {
                     player.sendMessage(
-                        TextComponent
-                            .of("Connecting you to a hub.. (" + hubServer.get().getId() + ")")
-                            .color(TextColor.GREEN));
+                        Component.text("Connecting you to a hub.. (" + hubServer.get().getId() + ")")
+                            .color(NamedTextColor.GREEN));
                     plugin.getProxy().getServer(hubServer.get().getId()).ifPresent(
                         registeredServer -> player.createConnectionRequest(registeredServer)
                             .fireAndForget());
                   } else {
                     player.sendMessage(
-                        TextComponent.of("There are no hub servers available!")
-                            .color(TextColor.RED));
+                        Component.text("There are no hub servers available!")
+                            .color(NamedTextColor.RED));
                   }
 
                 } catch (ServiceException e) {

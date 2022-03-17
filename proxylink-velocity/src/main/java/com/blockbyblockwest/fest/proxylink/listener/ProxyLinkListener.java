@@ -21,8 +21,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import net.kyori.text.TextComponent;
-import net.kyori.text.format.TextColor;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public class ProxyLinkListener {
 
@@ -44,13 +47,13 @@ public class ProxyLinkListener {
 
     if (plugin.getProxy().getPlayerCount() >= LinkedProxyServer.HARD_PLAYER_LIMIT
         && e.getPlayer().hasPermission("proxylink.slotbypass")) {
-      e.setResult(ComponentResult.denied(TextComponent.of("Proxy is full", TextColor.RED)));
+      e.setResult(ComponentResult.denied(Component.text("Proxy is full", NamedTextColor.RED)));
       return;
     }
 
     try {
       if (networkService.isUserOnline(e.getPlayer().getUniqueId())) {
-        e.setResult(ComponentResult.denied(TextComponent.of("Already connected.", TextColor.RED)));
+        e.setResult(ComponentResult.denied(Component.text("Already connected.", NamedTextColor.RED)));
       } else {
         networkService.connectUserToProxy(e.getPlayer().getUniqueId(), plugin.getServerId());
         playerInBackend.add(e.getPlayer().getUniqueId());
@@ -58,7 +61,7 @@ public class ProxyLinkListener {
       }
     } catch (ServiceException ex) {
       ex.printStackTrace();
-      e.setResult(ComponentResult.denied(TextComponent.of("An error occurred.", TextColor.RED)));
+      e.setResult(ComponentResult.denied(Component.text("An error occurred.", NamedTextColor.RED)));
     }
 
   }
@@ -124,7 +127,7 @@ public class ProxyLinkListener {
           .ifPresent(e::setInitialServer);
     } catch (ServiceException ex) {
       ex.printStackTrace();
-      e.getPlayer().disconnect(TextComponent.of("An error occurred", TextColor.RED));
+      e.getPlayer().disconnect(Component.text("An error occurred", NamedTextColor.RED));
     }
   }
 

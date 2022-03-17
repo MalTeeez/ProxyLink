@@ -2,17 +2,18 @@ package com.blockbyblockwest.fest.proxylink.command;
 
 import com.blockbyblockwest.fest.proxylink.ProxyLinkVelocity;
 import com.blockbyblockwest.fest.proxylink.exception.ServiceException;
-import com.velocitypowered.api.command.Command;
 import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ServerConnection;
 import java.util.Optional;
 import java.util.StringJoiner;
-import net.kyori.text.TextComponent;
-import net.kyori.text.format.TextColor;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class StaffChatCommand implements Command {
+public class StaffChatCommand implements SimpleCommand {
 
   private final static String PERMISSION = "proxylink.staffchat";
 
@@ -28,22 +29,27 @@ public class StaffChatCommand implements Command {
   }
 
   @Override
-  public void execute(CommandSource sender, @NonNull String[] args) {
-    if (args.length < 1) {
-      sender.sendMessage(TextComponent.of("Usage: /staffchat <message>").color(TextColor.RED));
+  public void execute(SimpleCommand.Invocation invocation) {
+    CommandSource commandSource = invocation.source();
+    String[] strings = invocation.arguments();
+    
+    if (strings.length < 1) {
+      if (commandSource instanceof Player) {
+        commandSource.sendMessage(Component.text("Usage: /staffchat <message>").color(NamedTextColor.RED));
+      }
       return;
     }
 
     StringJoiner joiner = new StringJoiner(" ");
-    for (String arg : args) {
+    for (String arg : strings) {
       joiner.add(arg);
     }
 
     String username;
     String server;
 
-    if (sender instanceof Player) {
-      Player player = (Player) sender;
+    if (commandSource instanceof Player) {
+      Player player = (Player) commandSource;
       username = player.getUsername();
       Optional<ServerConnection> serverConnection = player.getCurrentServer();
       server = serverConnection.map(
@@ -63,8 +69,9 @@ public class StaffChatCommand implements Command {
     }
   }
 
-  public boolean hasPermission(CommandSource source, @NonNull String[] args) {
-    return source.hasPermission(PERMISSION);
+  @Override
+  public boolean hasPermission(SimpleCommand.Invocation invocation) {
+    return invocation.source().hasPermission(PERMISSION);
   }
 
 }

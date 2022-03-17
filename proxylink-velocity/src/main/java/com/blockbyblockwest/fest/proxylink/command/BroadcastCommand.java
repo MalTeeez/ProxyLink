@@ -2,13 +2,16 @@ package com.blockbyblockwest.fest.proxylink.command;
 
 import com.blockbyblockwest.fest.proxylink.ProxyLinkVelocity;
 import com.blockbyblockwest.fest.proxylink.exception.ServiceException;
-import com.velocitypowered.api.command.Command;
 import com.velocitypowered.api.command.CommandSource;
-import net.kyori.text.TextComponent;
-import net.kyori.text.format.TextColor;
+import com.velocitypowered.api.command.SimpleCommand;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class BroadcastCommand implements Command {
+import java.util.ArrayList;
+import java.util.List;
+
+public class BroadcastCommand implements SimpleCommand {
 
   private static final char COLOR_CHAR = '\u00A7';
 
@@ -19,20 +22,27 @@ public class BroadcastCommand implements Command {
   }
 
   @Override
-  public void execute(CommandSource source, @NonNull String[] args) {
-    if (args.length > 0) {
+  public void execute(SimpleCommand.Invocation invocation) {
+    CommandSource commandSource = invocation.source();
+    String[] strings = invocation.arguments();
+    if (strings.length > 0) {
       try {
-        plugin.getNetworkService().broadcast(String.join(" ", args).replace('&', COLOR_CHAR));
+        plugin.getNetworkService().broadcast(String.join(" ", strings).replace('&', COLOR_CHAR));
       } catch (ServiceException e) {
         e.printStackTrace();
-        source.sendMessage(TextComponent.of("An error occurred", TextColor.RED));
+        commandSource.sendMessage(Component.text("An error occurred", NamedTextColor.RED));
       }
     }
   }
 
   @Override
-  public boolean hasPermission(CommandSource source, @NonNull String[] args) {
-    return source.hasPermission("proxylink.broadcast");
+  public List<String> suggest(SimpleCommand.Invocation invocation) {
+    return new ArrayList<String>();
+  }
+
+  @Override
+  public boolean hasPermission(SimpleCommand.Invocation invocation) {
+    return invocation.source().hasPermission("proxylink.broadcast");
   }
 
 }
