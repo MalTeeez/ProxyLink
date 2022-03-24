@@ -150,7 +150,7 @@ public class RedisNetworkService implements NetworkService {
 
   private Set<String> getServerIds(Jedis jedis) throws ServiceException {
     return jedis.zrangeByScore(NetworkKey.SERVER_SET, System.currentTimeMillis(),
-        Double.POSITIVE_INFINITY);
+            Double.POSITIVE_INFINITY);
   }
 
   private Collection<? extends BackendServer> getServerDatas(Jedis jedis, Collection<String> ids) {

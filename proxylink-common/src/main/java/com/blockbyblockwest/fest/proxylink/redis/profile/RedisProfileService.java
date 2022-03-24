@@ -22,8 +22,8 @@ import redis.clients.jedis.Transaction;
 
 public class RedisProfileService implements ProfileService {
 
-  private static final int NAME_CACHE_TTL = (int) Duration.ofDays(30).getSeconds();
-  private static final int UUID_CACHE_TTL = (int) Duration.ofDays(30).getSeconds();
+  private static final long NAME_CACHE_TTL = (int) Duration.ofDays(30).getSeconds();
+  private static final long UUID_CACHE_TTL = (int) Duration.ofDays(30).getSeconds();
 
   private static final Pattern COLON = Pattern.compile(":");
 
