@@ -5,11 +5,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.ConfigurationOptions;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
-import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
-import ninja.leaping.configurate.loader.ConfigurationLoader;
+import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.ConfigurationOptions;
+import org.spongepowered.configurate.hocon.HoconConfigurationLoader;
+import org.spongepowered.configurate.loader.ConfigurationLoader;
 
 public class Config {
 
@@ -24,8 +24,8 @@ public class Config {
     copyFromJarOrCreateFile();
 
     ConfigurationLoader<CommentedConfigurationNode> configLoader = HoconConfigurationLoader
-        .builder().setDefaultOptions(
-            ConfigurationOptions.defaults().setShouldCopyDefaults(true)).setFile(configFile)
+        .builder().defaultOptions(
+            ConfigurationOptions.defaults().shouldCopyDefaults(true)).file(configFile)
         .build();
 
     rootNode = configLoader.load();
@@ -33,7 +33,7 @@ public class Config {
   }
 
   public ConfigurationNode getNode(Object... path) {
-    return rootNode.getNode(path);
+    return rootNode.node(path);
   }
 
   private void copyFromJarOrCreateFile() {

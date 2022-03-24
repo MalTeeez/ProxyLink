@@ -2,6 +2,7 @@ package com.blockbyblockwest.fest.proxylink.listener;
 
 import com.blockbyblockwest.fest.proxylink.NetworkService;
 import com.blockbyblockwest.fest.proxylink.ProxyLinkVelocity;
+import com.blockbyblockwest.fest.proxylink.ServerType;
 import com.blockbyblockwest.fest.proxylink.exception.ServiceException;
 import com.blockbyblockwest.fest.proxylink.models.LinkedProxyServer;
 import com.velocitypowered.api.event.PostOrder;
@@ -122,7 +123,7 @@ public class ProxyLinkListener {
   @Subscribe
   public void onChooseFirstServer(PlayerChooseInitialServerEvent e) {
     try {
-      plugin.findHubWithLeastPlayers()
+      plugin.findBackendWithLeastPlayers(ServerType.HUB)
           .flatMap(plugin::toVelocityServer)
           .ifPresent(e::setInitialServer);
     } catch (ServiceException ex) {
@@ -138,7 +139,7 @@ public class ProxyLinkListener {
       return;
     }
     try {
-      plugin.findHubWithLeastPlayers()
+      plugin.findBackendWithLeastPlayers(ServerType.HUB)
           .flatMap(plugin::toVelocityServer)
           .ifPresent(hubServer -> e.setResult(RedirectPlayer.create(hubServer)));
     } catch (ServiceException ex) {
@@ -154,7 +155,7 @@ public class ProxyLinkListener {
     try {
       builder.onlinePlayers(networkService.getOnlineUserCount());
       builder.maximumPlayers(networkService.getMaxPlayerCount());
-      builder.version(new Version(builder.getVersion().getProtocol(), "BXBW 1.8-1.15"));
+      builder.version(new Version(builder.getVersion().getProtocol(), "1.12-1.18"));
       e.setPing(builder.build());
     } catch (ServiceException ex) {
       ex.printStackTrace();

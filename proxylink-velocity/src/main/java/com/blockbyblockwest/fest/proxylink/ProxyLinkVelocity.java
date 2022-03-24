@@ -15,7 +15,6 @@ import com.blockbyblockwest.fest.proxylink.redis.RedisBackend;
 import com.blockbyblockwest.fest.proxylink.redis.RedisNetworkService;
 import com.blockbyblockwest.fest.proxylink.redis.profile.RedisProfileService;
 import com.google.inject.Inject;
-import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
 import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
@@ -25,17 +24,21 @@ import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
 import com.velocitypowered.api.proxy.server.ServerInfo;
 import com.velocitypowered.api.scheduler.ScheduledTask;
+import io.leangen.geantyref.TypeToken;
+import org.slf4j.Logger;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.serialize.SerializationException;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
-import ninja.leaping.configurate.ConfigurationNode;
-import org.slf4j.Logger;
 
-@Plugin(id = "proxylink", name = "ProxyLink", version = "1.0", authors = {"Gabik21"})
+@Plugin(id = "proxylink", name = "ProxyLink", version = "1.1", authors = {"Gabik21"})
 public class ProxyLinkVelocity {
 
   private static ProxyLinkVelocity instance;
@@ -47,12 +50,11 @@ public class ProxyLinkVelocity {
   private final RedisBackend redisBackend = new RedisBackend();
 
   private final ProxyServer proxy;
-  private final CommandManager commandManager;
   private final Path directory;
   private final Logger logger;
 
   private String serverId;
-  private ScheduledTask heartbeastTask;
+  private ScheduledTask heartbeatTask;
 
   private NetworkService networkService;
   private ProfileService profileService;
@@ -60,10 +62,9 @@ public class ProxyLinkVelocity {
   private OnlinePlayerNames onlinePlayerNames;
 
   @Inject
-  public ProxyLinkVelocity(ProxyServer proxy, CommandManager commandManager,
+  public ProxyLinkVelocity(ProxyServer proxy,
       @DataDirectory Path directory, Logger logger) {
     this.proxy = proxy;
-    this.commandManager = commandManager;
     this.directory = directory;
     this.logger = logger;
   }
@@ -83,12 +84,12 @@ public class ProxyLinkVelocity {
     this.serverId = config.getNode("proxyid").getString();
     try {
       ConfigurationNode redisNode = config.getNode("redis");
-      redisBackend.initialize(new JedisConfig(redisNode.getNode("host").getString(),
-          redisNode.getNode("password").getString(), redisNode.getNode("database").getInt(),
-          redisNode.getNode("port").getInt(), redisNode.getNode("ssl").getBoolean(),
-          redisNode.getNode("max-pool-size").getInt(),
-          redisNode.getNode("max-pool-idle-size").getInt(),
-          redisNode.getNode("min-pool-idle-size").getInt()));
+      redisBackend.initialize(new JedisConfig(redisNode.node("host").getString(),
+          redisNode.node("password").getString(), redisNode.node("database").getInt(),
+          redisNode.node("port").getInt(), redisNode.node("ssl").getBoolean(),
+          redisNode.node("max-pool-size").getInt(),
+          redisNode.node("max-pool-idle-size").getInt(),
+          redisNode.node("min-pool-idle-size").getInt()));
 
       networkService = new RedisNetworkService(redisBackend.getJedisPool(),
           new VelocityEventExecutor(proxy.getEventManager()));
@@ -102,6 +103,12 @@ public class ProxyLinkVelocity {
         }
       }
 
+      // wait for gabiks dc reply
+      ConfigurationNode generic = config.getNode("generic");
+      List<String> test = generic.node("server-types").getList(TypeToken.get(String.class));
+      assert test != null;
+      test.forEach(logger::info);
+
       networkService.removeProxy(serverId);
       networkService.proxyHeartBeat(serverId);
 
@@ -110,7 +117,7 @@ public class ProxyLinkVelocity {
             new InetSocketAddress(server.getHost(), server.getPort())));
       }
 
-      heartbeastTask = proxy.getScheduler()
+      heartbeatTask = proxy.getScheduler()
           .buildTask(this, this::executeHeartBeat)
           .repeat(30, TimeUnit.SECONDS).schedule();
 
@@ -123,22 +130,26 @@ public class ProxyLinkVelocity {
     } catch (ServiceException e) {
       e.printStackTrace();
       System.exit(1);
+    } catch (SerializationException e) {
+      e.printStackTrace();
     }
 
     proxy.getEventManager().register(this, new ProxyLinkListener(this, networkService));
     proxy.getEventManager().register(this, new RemoteEventListener(this));
     proxy.getEventManager().register(this, new ProfileUpdateListener(profileService));
 
-    commandManager.register("send", new SendCommand(this));
-    commandManager.register("hub", new HubCommand(this));
-    commandManager.register("staffchat", new StaffChatCommand(this), "sc");
-    commandManager.register("broadcast", new BroadcastCommand(this), "alert");
+    proxy.getCommandManager().register("send", new SendCommand(this));
+    proxy.getCommandManager().register("hub", new HubCommand(this));
+    proxy.getCommandManager().register("staffchat", new StaffChatCommand(this), "sc");
+    proxy.getCommandManager().register("broadcast", new BroadcastCommand(this), "alert");
+    proxy.getCommandManager().register("find", new FindCommand(this), "search");
+
   }
 
   @Subscribe
   public void onShutdown(ProxyShutdownEvent e) {
-    if (heartbeastTask != null) {
-      heartbeastTask.cancel();
+    if (heartbeatTask != null) {
+      heartbeatTask.cancel();
     }
     if (networkService != null) {
       try {
@@ -188,9 +199,9 @@ public class ProxyLinkVelocity {
     return getProxy().getServer(backendServer.getId());
   }
 
-  public Optional<? extends BackendServer> findHubWithLeastPlayers() throws ServiceException {
+  public Optional<? extends BackendServer> findBackendWithLeastPlayers(ServerType type) throws ServiceException {
     return networkService.getServers().stream()
-        .filter(server -> server.getServerType() == ServerType.HUB)
+        .filter(server -> server.getServerType() == type)
         .min(Comparator.comparingInt(BackendServer::getPlayerCount));
   }
 
